@@ -1,12 +1,3 @@
-data "template_file" "user_data" {
-  template = "${file("${path.module}/user_data.sh")}"
-
-  vars {
-    aws_region  = "${var.region}"
-    bucket_name = "${var.bucket_name}"
-  }
-}
-
 resource "aws_s3_bucket" "bucket" {
   bucket = "${var.bucket_name}"
   acl    = "bucket-owner-full-control"
@@ -23,7 +14,7 @@ resource "aws_s3_bucket" "bucket" {
 
     prefix = "logs/"
 
-    tags {
+    tags = {
       "rule"      = "log"
       "autoclean" = "${var.log_auto_clean}"
     }
@@ -66,13 +57,14 @@ resource "aws_security_group_rule" "ingress_bastion" {
   from_port   = "${var.public_ssh_port}"
   to_port     = "${var.public_ssh_port}"
   protocol    = "TCP"
-  cidr_blocks = ["${concat(data.aws_subnet.subnets.*.cidr_block, var.cidrs)}"]
+  cidr_blocks = "${concat(data.aws_subnet.subnets.*.cidr_block, var.cidrs)}"
 
   security_group_id = "${aws_security_group.bastion_host_security_group.id}"
 }
 
 resource "aws_security_group_rule" "egress_bastion" {
   description = "Outgoing traffic from bastion to instances"
+  count       = "${var.bastion_open_egress == true ? 1 : 0}"
   type        = "egress"
   from_port   = "0"
   to_port     = "65535"
@@ -162,9 +154,9 @@ EOF
 
 resource "aws_route53_record" "bastion_record_name" {
   name    = "${var.bastion_record_name}"
-  zone_id = "${var.hosted_zone_name}"
+  zone_id = "${var.hosted_zone_name != "" ? var.hosted_zone_name : "empty"}"
   type    = "A"
-  count   = "${var.create_dns_record}"
+  count   = "${var.create_dns_record == true ? 1 : 0}"
 
   alias {
     evaluate_target_health = true
@@ -177,9 +169,7 @@ resource "aws_lb" "bastion_lb" {
   internal = "${var.is_lb_private}"
   name     = "${local.name_prefix}-lb"
 
-  subnets = [
-    "${var.elb_subnets}",
-  ]
+  subnets = "${var.elb_subnets}"
 
   load_balancer_type = "network"
   tags               = "${merge(var.tags)}"
@@ -191,6 +181,7 @@ resource "aws_lb_target_group" "bastion_lb_target_group" {
   protocol    = "TCP"
   vpc_id      = "${var.vpc_id}"
   target_type = "instance"
+  deregistration_delay = 120
 
   health_check {
     port     = "traffic-port"
@@ -201,7 +192,7 @@ resource "aws_lb_target_group" "bastion_lb_target_group" {
 }
 
 resource "aws_lb_listener" "bastion_lb_listener_22" {
-  "default_action" {
+  default_action {
     target_group_arn = "${aws_lb_target_group.bastion_lb_target_group.arn}"
     type             = "forward"
   }
@@ -217,8 +208,8 @@ resource "aws_iam_instance_profile" "bastion_host_profile" {
 }
 
 resource "aws_launch_configuration" "bastion_launch_configuration" {
-  name_prefix                 = "${var.bastion_launch_configuration_name}"
-  image_id                    = "${data.aws_ami.amazon-linux-2.id}"
+  name_prefix                 = "${var.bastion_launch_configuration_name}-"
+  image_id                    = var.bastion_ami_id == "" ? data.aws_ami.amazon-linux-2.id : var.bastion_ami_id
   instance_type               = "t2.nano"
   associate_public_ip_address = "${var.associate_public_ip_address}"
   enable_monitoring           = true
@@ -229,7 +220,12 @@ resource "aws_launch_configuration" "bastion_launch_configuration" {
     "${aws_security_group.bastion_host_security_group.id}",
   ]
 
-  user_data = "${data.template_file.user_data.rendered}"
+  user_data = templatefile("${path.module}/user_data.sh", {
+    static_ssh_users = var.static_ssh_users,
+    aws_region  = var.region
+    bucket_name = var.bucket_name
+    ssh_tunnel_only_users = var.ssh_tunnel_only_users
+  })
 
   lifecycle {
     create_before_destroy = true
@@ -243,9 +239,7 @@ resource "aws_autoscaling_group" "bastion_auto_scaling_group" {
   min_size             = "${var.bastion_instance_count}"
   desired_capacity     = "${var.bastion_instance_count}"
 
-  vpc_zone_identifier = [
-    "${var.auto_scaling_group_subnets}",
-  ]
+  vpc_zone_identifier = "${var.auto_scaling_group_subnets}"
 
   default_cooldown          = 180
   health_check_grace_period = 180
@@ -259,10 +253,11 @@ resource "aws_autoscaling_group" "bastion_auto_scaling_group" {
     "OldestLaunchConfiguration",
   ]
 
-  tags = ["${concat(
-      list(map("key", "Name", "value", "ASG-${aws_launch_configuration.bastion_launch_configuration.name}", "propagate_at_launch", true)),
-      local.tags_asg_format
-   )}"]
+  tag {
+    key = "Name"
+    value = "ASG-${aws_launch_configuration.bastion_launch_configuration.name}"
+    propagate_at_launch = true
+  }
 
   lifecycle {
     create_before_destroy = true

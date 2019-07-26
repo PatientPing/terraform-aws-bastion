@@ -16,6 +16,19 @@ setfacl -Rdm other:0 /var/log/bastion
 # Make OpenSSH execute a custom script on logins
 echo -e "\\nForceCommand /usr/bin/bastion/shell" >> /etc/ssh/sshd_config
 
+sed -i 's/MaxAuthTries\ [0-9]/MaxAuthTries 5/' /etc/ssh/sshd_config
+
+# Deny interactive shell to some users (tunnel-only)
+cat >> /etc/ssh/sshd_config << 'EOF'
+
+Match User ${ssh_tunnel_only_users}
+  AllowTcpForwarding yes
+  X11Forwarding no
+  AllowAgentForwarding no
+  ForceCommand /bin/false
+
+EOF
+
 # Block some SSH features that bastion host users could use to circumvent the solution
 awk '!/X11Forwarding/' /etc/ssh/sshd_config > temp && mv temp /etc/ssh/sshd_config
 echo "X11Forwarding no" >> /etc/ssh/sshd_config
@@ -159,6 +172,20 @@ fi
 EOF
 
 chmod 700 /usr/bin/bastion/sync_users
+
+################################################
+## Support creating users/keys from user_data ##
+################################################
+
+%{ for user in static_ssh_users ~}
+
+/usr/sbin/adduser ${user.name}
+mkdir -m 700 /home/${user.name}/.ssh
+chown ${user.name}:${user.name} /home/${user.name}/.ssh
+echo ${user.public_key} >> /home/${user.name}/.ssh/authorized_keys
+passwd -d -u ${user.name}
+
+%{ endfor }
 
 ###########################################
 ## SCHEDULE SCRIPTS AND SECURITY UPDATES ##
