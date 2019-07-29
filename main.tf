@@ -45,7 +45,7 @@ resource "aws_s3_bucket_object" "bucket_public_keys_readme" {
 
 resource "aws_security_group" "bastion_host_security_group" {
   description = "Enable SSH access to the bastion host from external via SSH port"
-  name        = "${local.name_prefix}-host"
+  name_prefix = var.resource_name_prefix
   vpc_id      = "${var.vpc_id}"
 
   tags = "${merge(var.tags)}"
@@ -76,7 +76,7 @@ resource "aws_security_group_rule" "egress_bastion" {
 
 resource "aws_security_group" "private_instances_security_group" {
   description = "Enable SSH access to the Private instances from the bastion via SSH port"
-  name        = "${local.name_prefix}-priv-instances"
+  name_prefix = "${var.resource_name_prefix}-private-instances"
   vpc_id      = "${var.vpc_id}"
 
   tags = "${merge(var.tags)}"
@@ -96,6 +96,7 @@ resource "aws_security_group_rule" "ingress_instances" {
 
 resource "aws_iam_role" "bastion_host_role" {
   path = "/"
+  name_prefix = var.resource_name_prefix
 
   assume_role_policy = <<EOF
 {
@@ -167,7 +168,7 @@ resource "aws_route53_record" "bastion_record_name" {
 
 resource "aws_lb" "bastion_lb" {
   internal = "${var.is_lb_private}"
-  name     = "${local.name_prefix}-lb"
+  name_prefix     = substr(var.resource_name_prefix, 0, 6)
 
   subnets = "${var.elb_subnets}"
 
@@ -176,7 +177,6 @@ resource "aws_lb" "bastion_lb" {
 }
 
 resource "aws_lb_target_group" "bastion_lb_target_group" {
-  name        = "${local.name_prefix}-lb-target"
   port        = "${var.public_ssh_port}"
   protocol    = "TCP"
   vpc_id      = "${var.vpc_id}"
@@ -205,10 +205,11 @@ resource "aws_lb_listener" "bastion_lb_listener_22" {
 resource "aws_iam_instance_profile" "bastion_host_profile" {
   role = "${aws_iam_role.bastion_host_role.name}"
   path = "/"
+  name_prefix = var.resource_name_prefix
 }
 
 resource "aws_launch_configuration" "bastion_launch_configuration" {
-  name_prefix                 = "${var.bastion_launch_configuration_name}-"
+  name_prefix                 = var.resource_name_prefix
   image_id                    = var.bastion_ami_id == "" ? data.aws_ami.amazon-linux-2.id : var.bastion_ami_id
   instance_type               = "t2.nano"
   associate_public_ip_address = "${var.associate_public_ip_address}"

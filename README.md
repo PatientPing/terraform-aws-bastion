@@ -79,6 +79,7 @@ module "bastion" {
 | private_ssh_port | Set the SSH port to use between the bastion and private instance | string | `22` | no |
 | public_ssh_port | Set the SSH port to use from desktop to the bastion | string | `22` | no |
 | region |  | string | - | yes |
+| resource_name_prefix | Prefix for AWS resource names including LC/ASG/SGs | string | `bastion-` | no |
 | ssh_tunnel_only_users | comma separated list of users who can use the bastion only for port-forwarding | string | `nobody` | no |
 | static_ssh_users | ssh users that we want to create statically in userdata rather than use s3 sync e.g. [ {name = "someone", public_key "id_rsa..." }]  | list(map) | [] no |
 | tags | A mapping of tags to assign | map | `<map>` | no |

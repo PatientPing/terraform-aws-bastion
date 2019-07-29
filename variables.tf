@@ -51,9 +51,9 @@ variable "bastion_record_name" {
   default     = ""
 }
 
-variable "bastion_launch_configuration_name" {
-  description = "Bastion Launch configuration Name, will also be used for the ASG"
-  default     = "lc"
+variable "resource_name_prefix" {
+  description = "Bastion resources name prefix"
+  default     = "bastion-"
 }
 
 variable "bastion_ami_id" {
