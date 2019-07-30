@@ -59,15 +59,16 @@ module "bastion" {
 | Name | Description | Type | Default | Required |
 |------|-------------|:----:|:-----:|:-----:|
 | auto_scaling_group_subnets | List of subnet were the Auto Scalling Group will deploy the instances | list | - | yes |
-| bastion_amis |  | map | `<map>` | no |
+| bastion_ami_id | Machine Image ID of bastion instances | string | `` | no |
 | bastion_host_key_pair | Select the key pair to use to launch the bastion host | string | - | yes |
 | bastion_instance_count | Count of bastion instance created on VPC | string | `1` | no |
+| bastion_open_egress | Allow open egress from bastion hosts | bool | true | no |
 | bastion_record_name | DNS record name to use for the bastion | string | `` | no |
 | bucket_name | Bucket name were the bastion will store the logs | string | - | yes |
 | bucket_force_destroy | On destroy, bucket and all objects should be destroyed when using true | string | false | no |
 | bucket_versioning | Enable bucket versioning or not | string | true | no |
 | cidrs | List of CIDRs than can access to the bastion. Default : 0.0.0.0/0 | list | `<list>` | no |
-| create_dns_record | Choose if you want to create a record name for the bastion (LB). If true 'hosted_zone_name' and 'bastion_record_name' are mandatory | integer | - | yes |
+| create_dns_record | Choose if you want to create a record name for the bastion (LB). If true 'hosted_zone_name' and 'bastion_record_name' are mandatory | bool | - | yes |
 | elb_subnets | List of subnet were the ELB will be deployed | list | - | yes |
 | hosted_zone_name | Name of the hosted zone were we'll register the bastion DNS name | string | `` | no |
 | is_lb_private | If TRUE the load balancer scheme will be "internal" else "internet-facing" | string | - | yes |
@@ -78,6 +79,9 @@ module "bastion" {
 | private_ssh_port | Set the SSH port to use between the bastion and private instance | string | `22` | no |
 | public_ssh_port | Set the SSH port to use from desktop to the bastion | string | `22` | no |
 | region |  | string | - | yes |
+| resource_name_prefix | Prefix for AWS resource names including LC/ASG/SGs | string | `bastion-` | no |
+| ssh_tunnel_only_users | comma separated list of users who can use the bastion only for port-forwarding | string | `nobody` | no |
+| static_ssh_users | ssh users that we want to create statically in userdata rather than use s3 sync e.g. [ {name = "someone", public_key "id_rsa..." }]  | list(map) | [] no |
 | tags | A mapping of tags to assign | map | `<map>` | no |
 | vpc_id | VPC id were we'll deploy the bastion | string | - | yes |
 

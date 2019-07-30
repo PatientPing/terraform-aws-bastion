@@ -51,9 +51,14 @@ variable "bastion_record_name" {
   default     = ""
 }
 
-variable "bastion_launch_configuration_name" {
-  description = "Bastion Launch configuration Name, will also be used for the ASG"
-  default     = "lc"
+variable "resource_name_prefix" {
+  description = "Bastion resources name prefix"
+  default     = "bastion-"
+}
+
+variable "bastion_ami_id" {
+  description = "Machine Image ID of bastion instances"
+  default = ""
 }
 
 variable "elb_subnets" {
@@ -67,7 +72,7 @@ variable "auto_scaling_group_subnets" {
 }
 
 variable "associate_public_ip_address" {
-  default = true
+  default = false
 }
 
 variable "bastion_instance_count" {
@@ -106,4 +111,19 @@ variable "public_ssh_port" {
 variable "private_ssh_port" {
   description = "Set the SSH port to use between the bastion and private instance"
   default     = 22
+}
+
+variable "bastion_open_egress" {
+  default = true
+}
+
+variable "ssh_tunnel_only_users" {
+  description = "Comma seperated (without spaces) ssh users that won't be allowed to have a shell"
+  default = "nobody"
+}
+
+variable "static_ssh_users" {
+  description = "SSH user/public-key pairs that are created in user_data rather than s3"
+  type = list(map(string))
+  default = []
 }
