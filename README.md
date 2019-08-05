@@ -97,7 +97,7 @@ module "bastion" {
 
 Syncing users from OneLogin supported with onelogin_sync=true with the following requirements:
 1.  SSH Keys stored in a user custom attribute called 'sshPublickey'.
-2.  OneLogin credentials stored in SSM Parameter Store parameters /bastion/onelogin_id and /bastion/onelogin_secret.
+2.  OneLogin credentials with Read perms stored in SSM Parameter Store parameters /bastion/onelogin_id and /bastion/onelogin_secret.
 
 
 Known issues
