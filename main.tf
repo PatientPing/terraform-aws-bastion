@@ -8,6 +8,14 @@ resource "aws_s3_bucket" "bucket" {
     enabled = var.bucket_versioning
   }
 
+  server_side_encryption_configuration {
+    rule {
+      apply_server_side_encryption_by_default {
+        sse_algorithm     = "AES256"
+      }
+    }
+  }
+
   lifecycle_rule {
     id      = "log"
     enabled = var.log_auto_clean
@@ -153,6 +161,32 @@ resource "aws_iam_role_policy" "bastion_host_role_policy" {
 EOF
 }
 
+resource "aws_iam_role_policy" "read_onelogin_keys" {
+  role = aws_iam_role.bastion_host_role.id
+
+  policy = <<EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ssm:DescribeParameters"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ssm:GetParameter"
+            ],
+            "Resource": "arn:aws:ssm:${var.region}:*:parameter/bastion/*"
+        }
+    ]
+}
+EOF
+}
+
 resource "aws_route53_record" "bastion_record_name" {
   name    = var.bastion_record_name
   zone_id = var.hosted_zone_name != "" ? var.hosted_zone_name : "empty"
@@ -226,6 +260,9 @@ resource "aws_launch_configuration" "bastion_launch_configuration" {
     aws_region  = var.region
     bucket_name = var.bucket_name
     ssh_tunnel_only_users = var.ssh_tunnel_only_users
+    onelogin_sync = var.onelogin_sync
+    onelogin_sync_script = file("${path.module}/onelogin_sync/onelogin_sync.py")
+    onelogin_sync_requirements = file("${path.module}/onelogin_sync/requirements.txt")
   })
 
   lifecycle {

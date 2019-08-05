@@ -76,6 +76,7 @@ module "bastion" {
 | log_expiry_days | Number of days before logs expiration | string | `90` | no |
 | log_glacier_days | Number of days before moving logs to Glacier | string | `60` | no |
 | log_standard_ia_days | Number of days before moving logs to IA Storage | string | `30` | no |
+| onelogin_sync | Enable syncing of ssh keys from OneLogin | bool | false | no |
 | private_ssh_port | Set the SSH port to use between the bastion and private instance | string | `22` | no |
 | public_ssh_port | Set the SSH port to use from desktop to the bastion | string | `22` | no |
 | region |  | string | - | yes |
@@ -91,6 +92,13 @@ module "bastion" {
 |------|-------------|
 | bucket_name |  |
 | elb_ip |  |
+
+## OneLogin Sync
+
+Syncing users from OneLogin supported with onelogin_sync=true with the following requirements:
+1.  SSH Keys stored in a user custom attribute called 'sshPublickey'.
+2.  OneLogin credentials stored in SSM Parameter Store parameters /bastion/onelogin_id and /bastion/onelogin_secret.
+
 
 Known issues
 ------------

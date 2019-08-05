@@ -198,3 +198,25 @@ cat > ~/mycron << EOF
 EOF
 crontab ~/mycron
 rm ~/mycron
+
+%{ if onelogin_sync }
+
+cat > /usr/bin/bastion/onelogin_sync.py << 'EOF'
+${onelogin_sync_script}
+EOF
+
+cat > /usr/bin/bastion/onelogin_sync.requirements << 'EOF'
+${onelogin_sync_requirements}
+EOF
+
+chmod 755 /usr/bin/bastion/onelogin_sync.py
+yum -y install python3
+apt-get -yq install python3
+pip3 install -r /usr/bin/bastion/onelogin_sync.requirements
+
+crontab -l > ~/mycron
+cat >> ~/mycron << EOF
+*/5 * * * * AWS_DEFAULT_REGION=${aws_region} /usr/bin/bastion/onelogin_sync.py
+EOF
+crontab ~/mycron
+%{ endif ~}
