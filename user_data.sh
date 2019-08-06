@@ -38,7 +38,7 @@ mkdir /usr/bin/bastion
 cat > /usr/bin/bastion/shell << 'EOF'
 
 # Check that the SSH client did not supply a command
-if [[ -z $SSH_ORIGINAL_COMMAND ]]; then
+if [ -z $SSH_ORIGINAL_COMMAND ]; then
 
   # The format of log files is /var/log/bastion/YYYY-MM-DD_HH-MM-SS_user
   LOG_FILE="`date --date="today" "+%Y-%m-%d_%H-%M-%S"`_`whoami`"
@@ -210,8 +210,7 @@ ${onelogin_sync_requirements}
 EOF
 
 chmod 755 /usr/bin/bastion/onelogin_sync.py
-yum -y install python3
-apt-get -yq install python3
+yum -yq install python3 || (apt-get -q update && apt-get -yq install python3-pip)
 pip3 install -r /usr/bin/bastion/onelogin_sync.requirements
 
 crontab -l > ~/mycron

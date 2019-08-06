@@ -69,6 +69,7 @@ def get_user_list(key_id, key_secret, log):
 
 
 def create_delete_users(log, users=None):
+    os.environ['PATH'] += os.pathsep + '/usr/sbin'
     for u in users:
 
         if not re.match('^[a-z][-a-z0-9]*$', u.username):
@@ -78,12 +79,12 @@ def create_delete_users(log, users=None):
         if u.status in [1, 3, 4] and u.state == 1:
             if 'sshPublickey' in u.custom_attributes and str(u.custom_attributes['sshPublickey'])[0:3] == 'ssh':
                 ssh_public_key = u.custom_attributes['sshPublickey']
-                os.system(f'/usr/bin/id -u {u.username} > /dev/null 2>&1 || /usr/sbin/useradd {u.username}')
+                os.system(f'id -u {u.username} > /dev/null 2>&1 || useradd -m {u.username}')
                 os.system(f'[ -d "/home/{u.username}/.ssh" ] ||  mkdir "/home/{u.username}/.ssh"')
                 os.system(f'echo {ssh_public_key} > "/home/{u.username}/.ssh/authorized_keys"')
-                os.system(f'/usr/bin/chown -R {u.username}:{u.username} "/home/{u.username}/.ssh"')
+                os.system(f'chown -R {u.username}:{u.username} "/home/{u.username}/.ssh"')
         else:
-            os.system(f'/usr/bin/id -u {u.username} > /dev/null 2>&1 && /usr/sbin/userdel {u.username}')
+            os.system(f'id -u {u.username} > /dev/null 2>&1 && userdel {u.username}')
 
 
 if __name__ == '__main__':
