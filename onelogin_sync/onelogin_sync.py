@@ -82,7 +82,10 @@ def create_delete_users(log, users=None):
                 os.system(f'id -u {u.username} > /dev/null 2>&1 || useradd -m {u.username}')
                 os.system(f'[ -d "/home/{u.username}/.ssh" ] ||  mkdir "/home/{u.username}/.ssh"')
                 os.system(f'echo {ssh_public_key} > "/home/{u.username}/.ssh/authorized_keys"')
-                os.system(f'chown -R {u.username}:{u.username} "/home/{u.username}/.ssh"')
+                os.system(f'chown {u.username}:{u.username} "/home/{u.username}/.ssh"')
+            else:
+                os.system(
+                    f'[ -f "/home/{u.username}/.ssh/authorized_keys" ] && rm "/home/{u.username}/.ssh/authorized_keys"')
         else:
             os.system(f'id -u {u.username} > /dev/null 2>&1 && userdel {u.username}')
 
