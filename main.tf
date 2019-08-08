@@ -261,6 +261,7 @@ resource "aws_launch_configuration" "bastion_launch_configuration" {
     bucket_name = var.bucket_name
     ssh_tunnel_only_users = var.ssh_tunnel_only_users
     onelogin_sync = var.onelogin_sync
+    onelogin_sync_role_ids = var.onelogin_sync_role_ids
     onelogin_sync_script = file("${path.module}/onelogin_sync/onelogin_sync.py")
     onelogin_sync_requirements = file("${path.module}/onelogin_sync/requirements.txt")
   })

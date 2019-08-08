@@ -12,8 +12,13 @@ from onelogin.api.client import OneLoginClient
 
 def get_opts(log):
     parser = configargparse.ArgParser(default_config_files=['onelogin_lookup.ini'])
-    parser.add('-v', '--verbosity', help='Logging level. Default ERROR', default='error')
-    parser.add('-c', '--config', help='Config file')
+    parser.add_argument('-v', '--verbosity', help='Logging level. Default ERROR', default='error')
+    parser.add_argument('-c', '--config', help='Config file')
+    parser.add_argument('-r', '--role_id', action='append', type=int,
+                        help="""
+                        Allowed OneLogin role IDs.  Use multiple --role_id [role_id] if needed.
+                        If no role IDs are specified, all active users will be synced.
+                        """)
 
     opts = parser.parse_args()
 
@@ -40,7 +45,11 @@ def get_logger():
 def setup():
     log = get_logger()
     opts = get_opts(log)
-    return opts, log
+    if opts.role_id:
+        allowed_roles_set = set(opts.role_id)
+    else:
+        allowed_roles_set = set([])
+    return opts, log, allowed_roles_set
 
 
 def get_onelogin_credentials():
@@ -68,15 +77,24 @@ def get_user_list(key_id, key_secret, log):
     return onelogin_users
 
 
-def create_delete_users(log, users=None):
+def create_delete_users(log, users=None, allowed_role_set=None):
     os.environ['PATH'] += os.pathsep + '/usr/sbin'
+
     for u in users:
 
-        if not re.match('^[a-z][-a-z0-9]*$', u.username):
-            log.warning('Skipping invalid username %s' % u.username)
-            continue
+        if allowed_role_set:
+            if u.role_ids:
+                user_roles_set = set(u.role_ids)
+            else:
+                user_roles_set = set([])
+            has_allowed_role = user_roles_set.intersection(allowed_role_set)
+        else:
+            has_allowed_role = True
 
-        if u.status in [1, 3, 4] and u.state == 1:
+        if (u.status in [1, 3, 4]
+                and re.match('^[a-z][-a-z0-9]*$', u.username)
+                and u.state == 1
+                and has_allowed_role):
             if 'sshPublickey' in u.custom_attributes and str(u.custom_attributes['sshPublickey'])[0:3] == 'ssh':
                 ssh_public_key = u.custom_attributes['sshPublickey']
                 os.system(f'id -u {u.username} > /dev/null 2>&1 || useradd -m {u.username}')
@@ -91,7 +109,7 @@ def create_delete_users(log, users=None):
 
 
 if __name__ == '__main__':
-    (opts, log) = setup()
+    (opts, log, allowed_roles_set) = setup()
     (onelogin_id, onelogin_secret) = get_onelogin_credentials()
     user_list = get_user_list(key_id=onelogin_id, key_secret=onelogin_secret, log=log)
-    create_delete_users(log=log, users=user_list)
+    create_delete_users(log=log, users=user_list, allowed_role_set=allowed_roles_set)

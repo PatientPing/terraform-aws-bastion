@@ -199,6 +199,11 @@ EOF
 crontab ~/mycron
 rm ~/mycron
 
+
+###########################################
+## ONELOGIN SYNC                         ##
+###########################################
+
 %{ if onelogin_sync }
 
 cat > /usr/bin/bastion/onelogin_sync.py << 'EOF'
@@ -215,7 +220,8 @@ pip3 install -r /usr/bin/bastion/onelogin_sync.requirements
 
 crontab -l > ~/mycron
 cat >> ~/mycron << EOF
-*/5 * * * * AWS_DEFAULT_REGION=${aws_region} /usr/bin/bastion/onelogin_sync.py
+*/5 * * * * AWS_DEFAULT_REGION=${aws_region} /usr/bin/bastion/onelogin_sync.py %{ for role in onelogin_sync_role_ids ~} --role_id ${role} %{ endfor }
 EOF
 crontab ~/mycron
+rm ~/mycron
 %{ endif ~}

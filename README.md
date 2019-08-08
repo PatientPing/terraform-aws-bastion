@@ -77,6 +77,7 @@ module "bastion" {
 | log_glacier_days | Number of days before moving logs to Glacier | string | `60` | no |
 | log_standard_ia_days | Number of days before moving logs to IA Storage | string | `30` | no |
 | onelogin_sync | Enable syncing of ssh keys from OneLogin | bool | false | no |
+| onelogin_sync_role_ids | When using OneLogin sync, optionally limit to a list of role IDs.  If empty, all active users will be synced. | list(int) | [] | no |
 | private_ssh_port | Set the SSH port to use between the bastion and private instance | string | `22` | no |
 | public_ssh_port | Set the SSH port to use from desktop to the bastion | string | `22` | no |
 | region |  | string | - | yes |
@@ -99,6 +100,7 @@ Syncing users from OneLogin supported with onelogin_sync=true with the following
 1.  SSH Keys stored in a user custom attribute called 'sshPublickey'.
 2.  OneLogin credentials with Read perms stored in SSM Parameter Store parameters /bastion/onelogin_id and /bastion/onelogin_secret.
 
+You can optionally limit syncing to users that have a role matching one or more role IDs.
 
 Known issues
 ------------
