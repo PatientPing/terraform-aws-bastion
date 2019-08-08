@@ -127,3 +127,12 @@ variable "static_ssh_users" {
   type = list(map(string))
   default = []
 }
+
+variable "onelogin_sync" {
+  description = "Support syncing users/keys from OneLogin"
+  default = false
+}
+
+variable "onelogin_sync_role_ids" {
+  default = []
+}

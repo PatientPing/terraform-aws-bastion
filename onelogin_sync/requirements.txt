@@ -1,0 +1,4 @@
+ConfigArgParse==0.13.0
+docutils==0.14
+onelogin==1.8.1
+boto3==1.9.201

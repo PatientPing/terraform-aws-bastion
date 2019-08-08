@@ -38,7 +38,7 @@ mkdir /usr/bin/bastion
 cat > /usr/bin/bastion/shell << 'EOF'
 
 # Check that the SSH client did not supply a command
-if [[ -z $SSH_ORIGINAL_COMMAND ]]; then
+if [ -z $SSH_ORIGINAL_COMMAND ]; then
 
   # The format of log files is /var/log/bastion/YYYY-MM-DD_HH-MM-SS_user
   LOG_FILE="`date --date="today" "+%Y-%m-%d_%H-%M-%S"`_`whoami`"
@@ -198,3 +198,30 @@ cat > ~/mycron << EOF
 EOF
 crontab ~/mycron
 rm ~/mycron
+
+
+###########################################
+## ONELOGIN SYNC                         ##
+###########################################
+
+%{ if onelogin_sync }
+
+cat > /usr/bin/bastion/onelogin_sync.py << 'EOF'
+${onelogin_sync_script}
+EOF
+
+cat > /usr/bin/bastion/onelogin_sync.requirements << 'EOF'
+${onelogin_sync_requirements}
+EOF
+
+chmod 755 /usr/bin/bastion/onelogin_sync.py
+yum -yq install python3 || (apt-get -q update && apt-get -yq install python3-pip)
+pip3 install -r /usr/bin/bastion/onelogin_sync.requirements
+
+crontab -l > ~/mycron
+cat >> ~/mycron << EOF
+*/5 * * * * AWS_DEFAULT_REGION=${aws_region} /usr/bin/bastion/onelogin_sync.py %{ for role in onelogin_sync_role_ids ~} --role_id ${role} %{ endfor }
+EOF
+crontab ~/mycron
+rm ~/mycron
+%{ endif ~}
