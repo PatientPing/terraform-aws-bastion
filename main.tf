@@ -245,6 +245,59 @@ resource "aws_lb_listener" "bastion_lb_listener_22" {
   protocol          = "TCP"
 }
 
+resource "aws_lb" "share_keys_web_server_lb" {
+  count = var.share_keys_web_server == true ? 1 : 0
+  internal = true
+  name = "${var.resource_name_prefix}authorized-keys"
+  subnets = var.share_keys_elb_subnets
+  load_balancer_type = "network"
+}
+
+resource "aws_lb_target_group" "share_keys_web_server_lb_target_group" {
+  port        = 443
+  protocol    = "TCP"
+  vpc_id      = var.vpc_id
+  deregistration_delay = 120
+  tags = merge(var.tags)
+  stickiness {
+    type = "lb_cookie"
+    enabled = false
+  }
+}
+
+resource "aws_lb_listener" "share_keys_web_server_lb_listener" {
+  count = var.share_keys_web_server == true ? 1 : 0
+  default_action {
+    target_group_arn = aws_lb_target_group.share_keys_web_server_lb_target_group.arn
+    type             = "forward"
+  }
+
+  load_balancer_arn = aws_lb.share_keys_web_server_lb[0].arn
+  port              = "443"
+  protocol          = "TCP"
+}
+
+resource "aws_security_group_rule" "ingress_share_keys_web_server_cidrs" {
+  description = "Incoming traffic to share keys"
+  type        = "ingress"
+  from_port   = 443
+  to_port     = 443
+  protocol    = "TCP"
+  cidr_blocks = var.share_keys_allowed_cidrs
+  security_group_id = aws_security_group.bastion_host_security_group.id
+}
+
+resource "aws_security_group_rule" "ingress_share_keys_web_server_sec_groups" {
+  count = length(var.share_keys_allowed_sec_groups)
+  description = "Incoming traffic to share keys"
+  type        = "ingress"
+  from_port   = 443
+  to_port     = 443
+  protocol    = "TCP"
+  source_security_group_id = var.share_keys_allowed_sec_groups[count.index]
+  security_group_id = aws_security_group.bastion_host_security_group
+}
+
 resource "aws_iam_instance_profile" "bastion_host_profile" {
   role = aws_iam_role.bastion_host_role.name
   path = "/"
@@ -273,6 +326,7 @@ resource "aws_launch_configuration" "bastion_launch_configuration" {
     onelogin_sync_role_ids = var.onelogin_sync_role_ids
     onelogin_sync_script = file("${path.module}/onelogin_sync/onelogin_sync.py")
     onelogin_sync_requirements = file("${path.module}/onelogin_sync/requirements.txt")
+    share_keys_web_server = var.share_keys_web_server
   })
 
   lifecycle {
@@ -295,6 +349,7 @@ resource "aws_autoscaling_group" "bastion_auto_scaling_group" {
 
   target_group_arns = [
     aws_lb_target_group.bastion_lb_target_group.arn,
+    aws_lb_target_group.share_keys_web_server_lb_target_group.arn
   ]
 
   termination_policies = [

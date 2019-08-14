@@ -82,6 +82,10 @@ module "bastion" {
 | public_ssh_port | Set the SSH port to use from desktop to the bastion | string | `22` | no |
 | region |  | string | - | yes |
 | resource_name_prefix | Prefix for AWS resource names including LC/ASG/SGs | string | `bastion-` | no |
+| share_keys_web_server | make public keys available through a web server on the bastion | bool | false | no |
+| share_keys_elb_subnets | ELB subnet IDs for sharing keys | list(string) | [] | no |
+| share_keys_allowed_cidrs | CIDRs allowed to get shared public keys | list(string) | [] | no |
+| share_keys_allowed_sec_groups | SecGroups allowed to get shared public keys over https | list(string) | [] | no |
 | ssh_tunnel_only_users | comma separated list of users who can use the bastion only for port-forwarding | string | `nobody` | no |
 | static_ssh_users | ssh users that we want to create statically in userdata rather than use s3 sync e.g. [ {name = "someone", public_key "id_rsa..." }]  | list(map) | [] no |
 | tags | A mapping of tags to assign | map | `<map>` | no |
@@ -101,6 +105,59 @@ Syncing users from OneLogin supported with onelogin_sync=true with the following
 2.  OneLogin credentials with Read perms stored in SSM Parameter Store parameters /bastion/onelogin_id and /bastion/onelogin_secret.
 
 You can optionally limit syncing to users that have a role matching one or more role IDs.
+
+## Sharing SSH Public Keys
+
+Once a user is SSHed to the bastion, they may want to ssh to a next-hop/target instance.  This option allows those
+other instances to use the same keys that are in use on the bastion by sharing those keys via HTTPS.
+
+Notes: 
+1.  Key sharing currently only supports HTTPS using a self-signed key.
+2.  All keys for all bastion users are shared in one concatenated response.  So this is appropriate for next-hop/targets
+with a shared user account (e.g. "ec2-user" or "ubuntu") rather than instances with multiple users with distinct access
+control policies.
+
+Example bastion Terraform configuration:
+```
+module "bastion" {
+...
+  share_keys_web_server = true
+  share_keys_elb_subnets = module.vpc.private_subnets
+  share_keys_allowed_cidrs = [ "10.0.0.0/8" ]
+}
+```
+
+Example target instance Terraform configuration:
+```
+data "aws_lb" "authorized_keys" {
+  name = "ssh-bastion-authorized-keys"
+}
+
+resource "aws_instance" "test" {
+  ...
+  user_data = <<EOF
+#!/bin/bash -xe
+echo AuthorizedKeysCommand /usr/bin/timeout 5 /usr/bin/curl --insecure https://${data.aws_lb.authorized_keys.dns_name}/authorized_keys >> /etc/ssh/sshd_config
+echo AuthorizedKeysCommandUser nobody >> /etc/ssh/sshd_config
+systemctl restart sshd.service
+EOF
+}
+```
+
+Note - You may want to consider supplying an emergency backup public key for use if the web server times-out.
+You could do this by adding ```|| echo <emergency-key>``` after the curl command above.
+
+
+To make use of key sharing, use ssh agent forwarding:
+```
+workstation $ ssh -A <bastion-username>@bastion-lb.example.com
+...
+<bastion-username>@bastion $ ssh <target-username>@target.example.com
+...
+<target--username>@target $
+
+```
+
 
 Known issues
 ------------

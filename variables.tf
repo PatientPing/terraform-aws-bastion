@@ -134,5 +134,26 @@ variable "onelogin_sync" {
 }
 
 variable "onelogin_sync_role_ids" {
+  description = "Numeric OneLogin role IDs to include in sync.  If none specified sync all avtive users with keys."
+  default = []
+}
+
+variable "share_keys_web_server" {
+  description = "Share public keys via a web server"
+  default = false
+}
+
+variable "share_keys_elb_subnets" {
+  description = "Share public keys via a web server"
+  default = []
+}
+
+variable "share_keys_allowed_cidrs" {
+  description = "CIDRs allowed to web get authorized keys"
+  default = []
+}
+
+variable "share_keys_allowed_sec_groups" {
+  description = "Security groups allowed to web get authorized keys"
   default = []
 }
