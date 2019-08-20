@@ -225,3 +225,49 @@ EOF
 crontab ~/mycron
 rm ~/mycron
 %{ endif ~}
+
+
+###########################################
+## SHARE AUTHORIZED KEYS VIA WEB SERVER  ##
+###########################################
+
+%{ if share_keys_web_server }
+
+amazon-linux-extras install nginx1.12 -y || apt-get install -yq nginx
+rm /usr/share/nginx/html/index.html
+openssl req -new -newkey rsa:4096 -days 3650 -nodes -x509 \
+    -subj "/C=US/ST=foo/L=foo/O=foo/CN=self-signed" \
+    -keyout /etc/nginx/self-signed.key  -out /etc/nginx/self-signed.cert
+chmod 600 /etc/nginx/self-signed.key
+
+cat > /etc/nginx/tls.conf << 'EOF'
+server {
+  listen       443 ssl http2;
+  root         /usr/share/nginx/html;
+  ssl_certificate "/etc/nginx/self-signed.cert";
+  ssl_certificate_key "/etc/nginx/self-signed.key";
+}
+EOF
+
+mv /etc/nginx/tls.conf /etc/nginx/conf.d/tls.conf || mv /etc/nginx/tls.conf /etc/nginx/sites-enabled/tls.conf
+
+systemctl restart nginx
+
+cat > /usr/bin/bastion/share_keys_web_server << 'EOF'
+#!/bin/bash
+[ -f /tmp/authorized_keys ] && rm /tmp/authorized_keys
+for home in $(getent passwd | grep -oP "/home/[^:]+"); do
+  [ -s "$home/.ssh/authorized_keys" ] && cat $home/.ssh/authorized_keys >> /tmp/authorized_keys
+done
+[ -f /tmp/authorized_keys ] && mv /tmp/authorized_keys /usr/share/nginx/html/authorized_keys
+EOF
+chmod 700 /usr/bin/bastion/share_keys_web_server
+
+crontab -l > ~/mycron
+cat >> ~/mycron << EOF
+*/5 * * * * /usr/bin/bastion/share_keys_web_server
+EOF
+crontab ~/mycron
+rm ~/mycron
+
+%{ endif ~}
