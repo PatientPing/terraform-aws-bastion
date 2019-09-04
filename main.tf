@@ -278,12 +278,13 @@ resource "aws_lb_listener" "share_keys_web_server_lb_listener" {
 }
 
 resource "aws_security_group_rule" "ingress_share_keys_web_server_cidrs" {
+  count = length(var.share_keys_allowed_cidrs)
   description = "Incoming traffic to share keys"
   type        = "ingress"
   from_port   = 443
   to_port     = 443
   protocol    = "TCP"
-  cidr_blocks = var.share_keys_allowed_cidrs
+  cidr_blocks = var.share_keys_allowed_cidrs[count.index]
   security_group_id = aws_security_group.bastion_host_security_group.id
 }
 
