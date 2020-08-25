@@ -284,7 +284,7 @@ resource "aws_security_group_rule" "ingress_share_keys_web_server_cidrs" {
   from_port   = 443
   to_port     = 443
   protocol    = "TCP"
-  cidr_blocks = var.share_keys_allowed_cidrs[count.index]
+  cidr_blocks = [var.share_keys_allowed_cidrs[count.index]]
   security_group_id = aws_security_group.bastion_host_security_group.id
 }
 
