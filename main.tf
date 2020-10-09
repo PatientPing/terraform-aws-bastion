@@ -260,7 +260,7 @@ resource "aws_lb_target_group" "share_keys_web_server_lb_target_group" {
   deregistration_delay = 120
   tags = merge(var.tags)
   stickiness {
-    type = "lb_cookie"
+    type = "source_ip"
     enabled = false
   }
 }
