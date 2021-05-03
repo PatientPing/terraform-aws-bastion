@@ -15,14 +15,14 @@ variable "bucket_force_destroy" {
 variable "tags" {
   description = "A mapping of tags to assign"
   default     = {}
-  type        = "map"
+  type        = map
 }
 
 variable "region" {}
 
 variable "cidrs" {
   description = "List of CIDRs than can access to the bastion. Default : 0.0.0.0/0"
-  type        = "list"
+  type        = list
 
   default = [
     "0.0.0.0/0",
@@ -62,12 +62,12 @@ variable "bastion_ami_id" {
 }
 
 variable "elb_subnets" {
-  type        = "list"
+  type        = list
   description = "List of subnet were the ELB will be deployed"
 }
 
 variable "auto_scaling_group_subnets" {
-  type        = "list"
+  type        = list
   description = "List of subnet were the Auto Scalling Group will deploy the instances"
 }
 
